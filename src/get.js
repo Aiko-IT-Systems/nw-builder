@@ -6,27 +6,27 @@ import https from "node:https";
 import path from "node:path";
 
 import progress from "cli-progress";
-import compressing from "compressing";
 import tar from "tar";
+import unzipper from "unzipper";
 
 import util from "./util.js";
 
 /**
  * @typedef {object} GetOptions
- * @property {string | "latest" | "stable" | "lts"} [options.version = "latest"]                  Runtime version
- * @property {"normal" | "sdk"}                     [options.flavor = "normal"]                   Build flavor
- * @property {"linux" | "osx" | "win"}              [options.platform]                            Target platform
- * @property {"ia32" | "x64" | "arm64"}             [options.arch]                                Target arch
- * @property {string}                               [options.downloadUrl = "https://dl.nwjs.io"]  Download server
- * @property {string}                               [options.cacheDir = "./cache"]                Cache directory
- * @property {boolean}                              [options.cache = true]                        If false, remove cache and redownload.
- * @property {boolean}                              [options.ffmpeg = false]                      If true, ffmpeg is not downloaded.
- * @property {false | "gyp"}                        [options.nativeAddon = false]                 Rebuild native modules
+ * @property {string | "latest" | "stable" | "lts"} [version = "latest"]                  Runtime version
+ * @property {"normal" | "sdk"}                     [flavor = "normal"]                   Build flavor
+ * @property {"linux" | "osx" | "win"}              [platform]                            Target platform
+ * @property {"ia32" | "x64" | "arm64"}             [arch]                                Target arch
+ * @property {string}                               [downloadUrl = "https://dl.nwjs.io"]  Download server
+ * @property {string}                               [cacheDir = "./cache"]                Cache directory
+ * @property {boolean}                              [cache = true]                        If false, remove cache and redownload.
+ * @property {boolean}                              [ffmpeg = false]                      If true, ffmpeg is not downloaded.
+ * @property {false | "gyp"}                        [nativeAddon = false]                 Rebuild native modules
  */
 
 /**
  * Get binaries.
- * 
+ *
  * @async
  * @function
  * @param  {GetOptions}    options                  Get mode options
@@ -37,11 +37,11 @@ import util from "./util.js";
  * nwbuild({
  *   mode: "get",
  * });
- * 
+ *
  * // Use with nw module
  * nwbuild({
  *   mode: "get",
- *   cacheDir: "./node_modules/nw" 
+ *   cacheDir: "./node_modules/nw"
  * });
  *
  * @example
@@ -84,6 +84,9 @@ import util from "./util.js";
  * });
  */
 async function get(options) {
+  if (fs.existsSync(options.cacheDir) === false) {
+    await fsm.mkdir(options.cacheDir, { recursive: true });
+  }
   await getNwjs(options);
   if (options.ffmpeg === true) {
     await getFfmpeg(options);
@@ -122,10 +125,14 @@ const getNwjs = async (options) => {
         C: options.cacheDir
       });
     } else {
-      await compressing.zip.uncompress(
-        out,
-        options.cacheDir,
-      );
+      await new Promise((res) => {
+        fs.createReadStream(out)
+          .pipe(unzipper.Extract({ path: options.cacheDir }))
+          .on("finish", res);
+      });
+      if (options.platform === "osx") {
+        await createSymlinks(options);
+      }
     }
     return;
   }
@@ -195,10 +202,15 @@ const getNwjs = async (options) => {
       C: options.cacheDir
     });
   } else {
-    await compressing.zip.uncompress(
-      out,
-      options.cacheDir,
-    );
+    await new Promise((res) => {
+      fs.createReadStream(out)
+        .pipe(unzipper.Extract({ path: options.cacheDir }))
+        .on("finish", res);
+    });
+    if (options.platform === "osx") {
+      await createSymlinks(options);
+    }
+
   }
 }
 
@@ -225,7 +237,8 @@ const getFfmpeg = async (options) => {
 
   // Check if cache exists.
   if (fs.existsSync(out) === true) {
-    await compressing.zip.uncompress(out, nwDir);
+    fs.createReadStream(out)
+      .pipe(unzipper.Extract({ path: nwDir }));
     return;
   }
 
@@ -264,7 +277,8 @@ const getFfmpeg = async (options) => {
 
   // Remove compressed file after download and decompress.
   await request;
-  await compressing.zip.uncompress(out, nwDir);
+  fs.createReadStream(out)
+    .pipe(unzipper.Extract({ path: nwDir }));
   await util.replaceFfmpeg(options.platform, nwDir);
 }
 
@@ -347,5 +361,21 @@ const getNodeHeaders = async (options) => {
     path.resolve(options.cacheDir, `node-v${options.version}-${options.platform}-${options.arch}`),
   );
 }
+
+const createSymlinks = async (options) => {
+  const frameworksPath = path.join(process.cwd(), options.cacheDir, `nwjs${options.flavor === "sdk" ? "-sdk" : ""}-v${options.version}-${options.platform}-${options.arch}`, "nwjs.app", "Contents", "Frameworks", "nwjs Framework.framework");
+  const symlinks = [
+    path.join(frameworksPath, "Helpers"),
+    path.join(frameworksPath, "Libraries"),
+    path.join(frameworksPath, "nwjs Framework"),
+    path.join(frameworksPath, "Resources"),
+    path.join(frameworksPath, "Versions", "Current"),
+  ];
+  for await (const symlink of symlinks) {
+    const link = String(await fsm.readFile(symlink));
+    await fsm.rm(symlink);
+    await fsm.symlink(link, symlink);
+  }
+};
 
 export default get;
