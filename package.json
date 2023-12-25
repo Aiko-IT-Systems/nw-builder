@@ -1,5 +1,5 @@
 {
-  "name": "nw-builder",
+  "name": "@aitsys/nw-builder",
   "version": "4.5.3",
   "description": "Build NW.js desktop applications for MacOS, Windows and Linux.",
   "keywords": [
@@ -16,6 +16,10 @@
     {
       "name": "Ayushman Chhabra",
       "url": "https://ayushmanchhabra.com/"
+    },
+    {
+      "name": "Lala Sabathil",
+      "url": "https://github.com/Lulalaby"
     }
   ],
   "contributors": [
