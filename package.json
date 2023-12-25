@@ -61,7 +61,7 @@
     "cli-progress": "^3.12.0",
     "compressing": "^1.10.0",
     "glob": "^10.3.10",
-    "node-gyp": "^10.0.1",
+    "node-gyp": "^9.4.1",
     "plist": "^3.1.0",
     "rcedit": "^4.0.1",
     "tar": "^6.2.0",
