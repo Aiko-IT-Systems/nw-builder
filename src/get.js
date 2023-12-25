@@ -6,8 +6,8 @@ import https from "node:https";
 import path from "node:path";
 
 import progress from "cli-progress";
+import compressing from "compressing";
 import tar from "tar";
-import unzipper from "unzipper";
 
 import util from "./util.js";
 
@@ -125,14 +125,17 @@ const getNwjs = async (options) => {
         C: options.cacheDir
       });
     } else {
-      await new Promise((res) => {
-        fs.createReadStream(out)
-          .pipe(unzipper.Extract({ path: options.cacheDir }))
-          .on("finish", res);
+      await compressing.zip.uncompress(
+        out,
+        options.cacheDir,
+      ).then(async () => {
+        if (options.platform === "osx") {
+          await createSymlinks(options);
+        }
+      }).catch((err) => {
+        console.error(err);
+        throw err;
       });
-      if (options.platform === "osx") {
-        await createSymlinks(options);
-      }
     }
     return;
   }
@@ -202,14 +205,17 @@ const getNwjs = async (options) => {
       C: options.cacheDir
     });
   } else {
-    await new Promise((res) => {
-      fs.createReadStream(out)
-        .pipe(unzipper.Extract({ path: options.cacheDir }))
-        .on("finish", res);
+    await compressing.zip.uncompress(
+      out,
+      options.cacheDir,
+    ).then(async () => {
+      if (options.platform === "osx") {
+        await createSymlinks(options);
+      }
+    }).catch((err) => {
+      console.error(err);
+      throw err;
     });
-    if (options.platform === "osx") {
-      await createSymlinks(options);
-    }
 
   }
 }
