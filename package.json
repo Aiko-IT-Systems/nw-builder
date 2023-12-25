@@ -31,7 +31,7 @@
   "license": "MIT",
   "main": "./src/index.js",
   "bin": {
-    "nwbuild": "./src/cli.js"
+    "nwbuild": "src/cli.js"
   },
   "types": "./src/index.d.ts",
   "type": "module",
@@ -40,10 +40,10 @@
     "patches",
     "src"
   ],
-  "homepage": "https://github.com/nwutils/nw-builder",
+  "homepage": "https://github.com/Aiko-IT-Systems/nw-builder",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nwutils/nw-builder.git"
+    "url": "git+https://github.com/Aiko-IT-Systems/nw-builder.git"
   },
   "scripts": {
     "lint": "eslint src/get.js",
